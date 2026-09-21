@@ -107,9 +107,9 @@ export class YouTubeProvider implements MediaProvider {
       provider: 'youtube',
       providerName: 'YouTube',
       canDirectDownload: false,
-      statusNote: 'YouTube Media (Stream Restricted)',
+      statusNote: 'Preview available',
       restrictionReason:
-        'This source does not provide an authorized downloadable media stream. You can upload the original file to convert it to MP3.',
+        "Direct audio extraction isn't available for this source. Upload your media file to convert it to MP3.",
     };
   }
 }

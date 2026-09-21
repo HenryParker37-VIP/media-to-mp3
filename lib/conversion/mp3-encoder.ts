@@ -187,9 +187,31 @@ async function encodeInThread(params: WorkerTaskParams): Promise<EncodeResult> {
 
 /**
  * Universal browser download handler, fully compatible with Chrome, Safari, and iPhone/iOS.
+/**
+ * Sanitizes a title or filename for safe browser downloading, appending .mp3 exactly once.
+ */
+export function sanitizeFilename(rawName?: string): string {
+  if (!rawName || typeof rawName !== 'string') return 'converted-audio.mp3';
+  let clean = rawName
+    .replace(/[/\\?%*:|"<>]/g, '_')
+    .replace(/[\x00-\x1f\x80-\x9f]/g, '')
+    .trim();
+  // Remove existing audio/video extension if present
+  clean = clean.replace(/\.(mp3|wav|m4a|mp4|webm|mov|ogg|aac|flac)$/i, '').trim();
+  // Collapse consecutive underscores and trim
+  clean = clean.replace(/_+/g, '_').replace(/^_+|_+$/g, '').trim();
+  if (!clean) return 'converted-audio.mp3';
+  if (clean.length > 120) {
+    clean = clean.substring(0, 120).trim();
+  }
+  return `${clean}.mp3`;
+}
+
+/**
+ * Universal browser download handler, fully compatible with Chrome, Safari, and iPhone/iOS.
  */
 export function triggerBlobDownload(blob: Blob, rawFilename: string): void {
-  const safeFilename = rawFilename.endsWith('.mp3') ? rawFilename : `${rawFilename}.mp3`;
+  const safeFilename = sanitizeFilename(rawFilename);
   const url = URL.createObjectURL(blob);
 
   const anchor = document.createElement('a');
@@ -202,9 +224,11 @@ export function triggerBlobDownload(blob: Blob, rawFilename: string): void {
   document.body.appendChild(anchor);
   anchor.click();
 
-  // Cleanup after browser has begun download
+  // Cleanup object URL after browser has begun download
   setTimeout(() => {
-    document.body.removeChild(anchor);
+    if (document.body.contains(anchor)) {
+      document.body.removeChild(anchor);
+    }
     URL.revokeObjectURL(url);
-  }, 1000);
+  }, 1500);
 }

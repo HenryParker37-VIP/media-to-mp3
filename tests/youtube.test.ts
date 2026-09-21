@@ -24,7 +24,7 @@ describe('YouTubeProvider', () => {
     expect(provider.extractVideoId('https://www.youtube.com/shorts/dQw4w9WgXcQ?feature=share')).toBe('dQw4w9WgXcQ');
   });
 
-  it('returns false for direct download capability and provides clear explanation', async () => {
+  it('returns false for direct download capability and provides clear neutral explanation', async () => {
     // Note: Live oEmbed test for Rick Astley
     const meta = await provider.fetchMetadata('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
     expect(meta.canDirectDownload).toBe(false);
@@ -32,7 +32,8 @@ describe('YouTubeProvider', () => {
     expect(meta.provider).toBe('youtube');
     expect(meta.title).toBeTruthy();
     expect(meta.author).toBeTruthy();
+    expect(meta.statusNote).toBe('Preview available');
     expect(meta.thumbnailUrl).toContain('dQw4w9WgXcQ');
-    expect(meta.restrictionReason).toContain('This source does not provide an authorized downloadable media stream');
+    expect(meta.restrictionReason).toContain("Direct audio extraction isn't available for this source");
   });
 });

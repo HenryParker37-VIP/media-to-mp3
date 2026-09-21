@@ -47,11 +47,15 @@ export const QUALITY_PRESETS: Record<QualityOption, QualityConfig> = {
   },
 };
 
+export const DEFAULT_QUALITY: QualityOption = 'standard';
+
 export type ConversionStage =
   | 'idle'
   | 'analyzing'
+  | 'preparing'
   | 'decoding'
-  | 'encoding'
+  | 'converting'
+  | 'finalizing'
   | 'ready'
   | 'complete'
   | 'error';
@@ -59,7 +63,7 @@ export type ConversionStage =
 export interface ConversionState {
   stage: ConversionStage;
   percent?: number; // Only populated when measurably calculated (0-100)
-  isIndeterminate: boolean; // True for analyzing / decoding where progress is non-linear/indeterminate
+  isIndeterminate: boolean; // True for non-linear/indeterminate stages
   message: string;
   error?: string;
   downloadUrl?: string;

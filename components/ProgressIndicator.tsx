@@ -92,14 +92,18 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({ state }) =
       {/* Message and Status Indicator */}
       <div className="text-center space-y-1 max-w-sm">
         <h4 className="text-sm font-semibold tracking-wide text-neutral-100">
-          {isComplete ? 'Download Complete' : message}
+          {isComplete ? 'MP3 ready' : message}
         </h4>
         <p className="text-xs text-neutral-400">
           {isComplete
-            ? 'Your MP3 has been processed and is ready.'
+            ? 'Your audio has been converted and is ready.'
             : isIndeterminate
-            ? 'Decoding media stream in browser...'
-            : `Encoding frames at ${numericPercent}%`}
+            ? stage === 'preparing'
+              ? 'Reading media stream in browser…'
+              : stage === 'finalizing'
+              ? 'Packing audio frames…'
+              : 'Decoding media track in browser…'
+            : `Encoding frames (${numericPercent}%)`}
         </p>
       </div>
 

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as lamejs from '@breezystack/lamejs';
+import { sanitizeFilename } from '@/lib/conversion/mp3-encoder';
 
 describe('MP3 Encoder Functionality', () => {
   it('encodes synthetic PCM sine wave to MP3 frames', () => {
@@ -48,5 +49,15 @@ describe('MP3 Encoder Functionality', () => {
     const secondByte = firstChunk[1] & 0xff;
     expect(firstByte).toBe(0xff);
     expect(secondByte & 0xe0).toBe(0xe0);
+  });
+
+  it('sanitizes filenames and appends .mp3 exactly once', () => {
+    expect(sanitizeFilename('Rick Astley - Never Gonna Give You Up')).toBe('Rick Astley - Never Gonna Give You Up.mp3');
+    expect(sanitizeFilename('my_video.mp4')).toBe('my_video.mp3');
+    expect(sanitizeFilename('song.wav')).toBe('song.mp3');
+    expect(sanitizeFilename('already.mp3')).toBe('already.mp3');
+    expect(sanitizeFilename('bad/name:with*illegal?chars"<>|')).toBe('bad_name_with_illegal_chars.mp3');
+    expect(sanitizeFilename('')).toBe('converted-audio.mp3');
+    expect(sanitizeFilename(undefined)).toBe('converted-audio.mp3');
   });
 });

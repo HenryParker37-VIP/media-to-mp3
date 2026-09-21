@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { MediaMetadata, QualityOption, ConversionState } from '@/lib/types';
 import { QualitySelector } from './QualitySelector';
@@ -13,7 +13,7 @@ import {
   Upload,
   RefreshCw,
   ExternalLink,
-  ShieldAlert,
+  Info,
   Clock,
   HardDrive,
 } from 'lucide-react';
@@ -41,11 +41,39 @@ export const MediaCard: React.FC<MediaCardProps> = ({
 }) => {
   const isProcessing =
     conversionState.stage === 'analyzing' ||
+    conversionState.stage === 'preparing' ||
     conversionState.stage === 'decoding' ||
-    conversionState.stage === 'encoding';
+    conversionState.stage === 'converting' ||
+    conversionState.stage === 'finalizing';
 
   const isComplete = conversionState.stage === 'complete';
   const isError = conversionState.stage === 'error';
+
+  // Thumbnail fallback chain: maxresdefault -> hqdefault -> mqdefault
+  const [thumbSrc, setThumbSrc] = useState<string>(metadata.thumbnailUrl || '');
+  const [fallbackIndex, setFallbackIndex] = useState(0);
+
+  useEffect(() => {
+    if (metadata.provider === 'youtube' && metadata.id) {
+      setThumbSrc(`https://i.ytimg.com/vi/${metadata.id}/hqdefault.jpg`);
+      setFallbackIndex(0);
+    } else {
+      setThumbSrc(metadata.thumbnailUrl || '');
+    }
+  }, [metadata.id, metadata.provider, metadata.thumbnailUrl]);
+
+  const handleImageError = () => {
+    if (metadata.provider === 'youtube' && metadata.id) {
+      const fallbacks = [
+        `https://i.ytimg.com/vi/${metadata.id}/mqdefault.jpg`,
+        `https://i.ytimg.com/vi/${metadata.id}/default.jpg`,
+      ];
+      if (fallbackIndex < fallbacks.length) {
+        setThumbSrc(fallbacks[fallbackIndex]);
+        setFallbackIndex((prev) => prev + 1);
+      }
+    }
+  };
 
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return null;
@@ -61,48 +89,51 @@ export const MediaCard: React.FC<MediaCardProps> = ({
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
+  const isYouTube = metadata.provider === 'youtube';
+
   return (
-    <div className="w-full bg-neutral-900/90 border border-neutral-800/90 rounded-2xl p-5 shadow-2xl backdrop-blur-md transition-all duration-300">
-      {/* Top Media Metadata Row */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start">
-        {/* Thumbnail Preview with subtle pulse during conversion */}
+    <div className="w-full bg-neutral-900/80 border border-neutral-800 rounded-2xl p-5 sm:p-6 shadow-xl transition-all duration-200">
+      {/* Media Details Row (Responsive side-by-side on desktop, stacked on mobile) */}
+      <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 items-start">
+        {/* Media Thumbnail */}
         <div
           className={`
-            relative w-full sm:w-44 h-32 rounded-xl overflow-hidden bg-neutral-950 border border-neutral-800 flex-shrink-0 flex items-center justify-center
-            ${isProcessing ? 'ring-2 ring-sky-500/50 animate-pulse' : ''}
+            relative w-full sm:w-48 aspect-video sm:aspect-[16/10] rounded-xl overflow-hidden bg-neutral-950 border border-neutral-800/80 flex-shrink-0 flex items-center justify-center
+            ${isProcessing ? 'ring-2 ring-sky-500/40 animate-pulse' : ''}
           `}
         >
-          {metadata.thumbnailUrl ? (
+          {thumbSrc ? (
             <Image
-              src={metadata.thumbnailUrl}
+              src={thumbSrc}
               alt={metadata.title}
+              onError={handleImageError}
               fill
-              sizes="(max-width: 640px) 100vw, 176px"
+              sizes="(max-width: 640px) 100vw, 192px"
               className="object-cover"
               unoptimized
             />
-          ) : metadata.format?.toLowerCase() === 'mp4' || metadata.format?.toLowerCase() === 'mov' || metadata.format?.toLowerCase() === 'webm' ? (
-            <div className="flex flex-col items-center justify-center text-neutral-500">
-              <FileVideo className="w-10 h-10 mb-1 text-sky-400" />
-              <span className="text-[11px] font-semibold text-neutral-400 uppercase">
+          ) : metadata.format?.toLowerCase() === 'mp4' ||
+            metadata.format?.toLowerCase() === 'mov' ||
+            metadata.format?.toLowerCase() === 'webm' ? (
+            <div className="flex flex-col items-center justify-center text-neutral-500 py-4">
+              <FileVideo className="w-8 h-8 mb-1 text-sky-400" />
+              <span className="text-[10px] font-semibold text-neutral-400 uppercase">
                 {metadata.format || 'Video'}
               </span>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center text-neutral-500">
-              <FileAudio className="w-10 h-10 mb-1 text-indigo-400" />
-              <span className="text-[11px] font-semibold text-neutral-400 uppercase">
+            <div className="flex flex-col items-center justify-center text-neutral-500 py-4">
+              <FileAudio className="w-8 h-8 mb-1 text-indigo-400" />
+              <span className="text-[10px] font-semibold text-neutral-400 uppercase">
                 {metadata.format || 'Audio'}
               </span>
             </div>
           )}
 
-          {/* Provider Badge Overlay */}
-          <div className="absolute top-2 left-2 flex items-center space-x-1 px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-sm text-[10px] font-medium text-white border border-white/10">
-            {metadata.provider === 'youtube' && (
-              <Youtube className="w-3 h-3 text-red-500 fill-red-500" />
-            )}
-            <span>{metadata.providerName}</span>
+          {/* Provider Badge */}
+          <div className="absolute top-2 left-2 flex items-center space-x-1.5 px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-sm text-[11px] font-medium text-white border border-white/10">
+            {isYouTube && <Youtube className="w-3.5 h-3.5 text-red-500 fill-red-500" />}
+            <span>{isYouTube ? 'YouTube' : metadata.providerName}</span>
           </div>
 
           {metadata.durationSeconds && (
@@ -113,7 +144,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
         </div>
 
         {/* Media Information */}
-        <div className="flex-1 min-w-0 space-y-2">
+        <div className="flex-1 min-w-0 space-y-2 w-full">
           <div className="space-y-1">
             <h3
               className="text-base font-semibold text-white tracking-tight leading-snug line-clamp-2"
@@ -124,10 +155,15 @@ export const MediaCard: React.FC<MediaCardProps> = ({
 
             <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs text-neutral-400">
               {metadata.author && (
-                <span className="font-medium text-neutral-300 truncate max-w-[200px]">
+                <span className="font-medium text-neutral-300 truncate max-w-[220px]">
                   {metadata.author}
                 </span>
               )}
+
+              {/* Status Indicator */}
+              <span className="inline-flex items-center text-neutral-400 text-xs">
+                {metadata.statusNote || (isYouTube ? 'Preview available' : 'Ready to convert')}
+              </span>
 
               {metadata.durationSeconds && (
                 <span className="flex items-center space-x-1">
@@ -145,25 +181,35 @@ export const MediaCard: React.FC<MediaCardProps> = ({
             </div>
           </div>
 
-          {/* Canonical link to original source */}
+          {/* External Source Link */}
           {metadata.url && (
             <div className="pt-0.5">
               <a
                 href={metadata.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center space-x-1 text-[11px] text-neutral-500 hover:text-sky-400 transition-colors"
+                className="inline-flex items-center space-x-1 text-xs text-neutral-500 hover:text-sky-400 transition-colors"
               >
-                <span className="truncate max-w-[260px] sm:max-w-xs">{metadata.url}</span>
-                <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate max-w-[240px] sm:max-w-xs">{metadata.url}</span>
+                <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
               </a>
+            </div>
+          )}
+
+          {/* Subtle Neutral Information for YouTube (No large yellow box) */}
+          {isYouTube && (
+            <div className="pt-1 flex items-start space-x-2 text-xs text-neutral-400 leading-relaxed">
+              <Info className="w-4 h-4 text-neutral-500 flex-shrink-0 mt-0.5" />
+              <span>
+                Direct audio extraction isn&apos;t available for this source. Upload your media file to convert it to MP3.
+              </span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Conversion States or Action Area */}
-      <div className="mt-5 pt-4 border-t border-neutral-800/80">
+      {/* Action Area / Processing States */}
+      <div className="mt-5 pt-4 border-t border-neutral-800">
         {isProcessing || isComplete ? (
           <div>
             <ProgressIndicator state={conversionState} />
@@ -174,93 +220,86 @@ export const MediaCard: React.FC<MediaCardProps> = ({
                   <button
                     type="button"
                     onClick={onDownloadAgain}
-                    className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-semibold text-sm transition-all shadow-lg shadow-sky-500/20 active:scale-95"
+                    className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center space-x-2 px-6 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-semibold text-sm transition-all shadow-md active:scale-98"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Download Again</span>
+                    <span>Download MP3</span>
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={onReset}
-                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-medium text-sm transition-all active:scale-95"
+                  className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-medium text-sm transition-all active:scale-98"
                 >
                   <RefreshCw className="w-4 h-4" />
-                  <span>Convert Another File</span>
+                  <span>Convert another file</span>
                 </button>
               </div>
             )}
           </div>
+        ) : isYouTube ? (
+          /* YouTube Actions: Clean, intentional, no warning styling */
+          <div className="flex flex-col sm:flex-row gap-3 pt-1">
+            <button
+              type="button"
+              onClick={onTriggerUpload}
+              className="flex-1 min-h-[44px] inline-flex items-center justify-center space-x-2 px-5 py-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-semibold text-sm transition-all active:scale-98 shadow-md"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Upload file to convert</span>
+            </button>
+
+            <a
+              href={metadata.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="min-h-[44px] inline-flex items-center justify-center space-x-2 px-4 py-3 rounded-xl border border-neutral-800 hover:bg-neutral-800/80 text-neutral-300 hover:text-white text-xs font-medium transition-colors"
+            >
+              <span>Open on YouTube</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+
+            <button
+              type="button"
+              onClick={onReset}
+              className="min-h-[44px] px-4 py-3 rounded-xl border border-neutral-800/80 hover:bg-neutral-800/50 text-neutral-400 hover:text-neutral-200 text-xs font-medium transition-colors"
+            >
+              Clear
+            </button>
+          </div>
         ) : (
+          /* Authorized or Uploaded Media: Conversion Controls */
           <div className="space-y-4">
-            {/* Stream Restriction Explanation if YouTube */}
-            {!metadata.canDirectDownload ? (
-              <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-4 space-y-3">
-                <div className="flex items-start space-x-2.5">
-                  <ShieldAlert className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <h4 className="text-xs font-semibold text-amber-300">
-                      Authorized Stream Notice
-                    </h4>
-                    <p className="text-xs text-amber-200/80 leading-relaxed">
-                      {metadata.restrictionReason ||
-                        'This source does not provide an authorized downloadable media stream. You can upload the original file to convert it to MP3.'}
-                    </p>
-                  </div>
-                </div>
+            <QualitySelector
+              value={quality}
+              onChange={onQualityChange}
+              disabled={isProcessing}
+            />
 
-                <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={onTriggerUpload}
-                    className="w-full inline-flex items-center justify-center space-x-2 px-4 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-sky-500/20 transition-all active:scale-98"
-                  >
-                    <Upload className="w-4 h-4" />
-                    <span>Upload Original File</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onReset}
-                    className="sm:w-auto px-4 py-3 rounded-xl border border-neutral-800 hover:bg-neutral-800/60 text-neutral-400 hover:text-neutral-200 text-xs font-medium transition-colors text-center"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              /* Authorized Downloadable or Uploaded Media */
-              <div className="space-y-4">
-                <QualitySelector
-                  value={quality}
-                  onChange={onQualityChange}
-                  disabled={isProcessing}
-                />
-
-                {isError && conversionState.error && (
-                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300">
-                    {conversionState.error}
-                  </div>
-                )}
-
-                <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
-                  <button
-                    type="button"
-                    onClick={onStartConversion}
-                    className="flex-1 inline-flex items-center justify-center space-x-2 px-5 py-3.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold text-sm shadow-xl shadow-sky-500/20 transition-all active:scale-98"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download MP3</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onReset}
-                    className="px-4 py-3.5 rounded-xl border border-neutral-800 hover:bg-neutral-800/60 text-neutral-400 hover:text-neutral-200 text-xs font-medium transition-colors text-center"
-                  >
-                    Reset
-                  </button>
-                </div>
+            {isError && conversionState.error && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300">
+                {conversionState.error}
               </div>
             )}
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-1">
+              <button
+                type="button"
+                onClick={onStartConversion}
+                className="flex-1 min-h-[44px] inline-flex items-center justify-center space-x-2 px-5 py-3.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-semibold text-sm transition-all shadow-md active:scale-98"
+              >
+                <Download className="w-4 h-4" />
+                <span>Convert to MP3</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onReset}
+                className="min-h-[44px] px-4 py-3.5 rounded-xl border border-neutral-800 hover:bg-neutral-800/60 text-neutral-400 hover:text-neutral-200 text-xs font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -2,10 +2,10 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'MediaDrop - Simple, Privacy-First Media to MP3 Converter',
+  title: 'MediaDrop - Convert Media to MP3',
   description:
-    'Paste media URLs or drop files to convert directly to MP3 in your browser. Powered by client-side Web Audio encoding and official YouTube oEmbed metadata.',
-  keywords: ['mp3 converter', 'audio converter', 'media drop', 'youtube metadata', 'client-side audio'],
+    'Paste a media link or upload a file to analyze and convert supported media directly in your browser.',
+  keywords: ['convert media to mp3', 'audio converter', 'media drop', 'youtube metadata', 'in-browser audio'],
 };
 
 export const viewport: Viewport = {
